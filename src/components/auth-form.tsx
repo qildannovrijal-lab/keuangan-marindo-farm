@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, type FormEvent } from "react";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, Leaf, LockKeyhole, Mail, Sprout } from "lucide-react";
 import { createSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
@@ -147,7 +148,7 @@ export function AuthForm({ mode, confirmationNotice = null }: { mode: AuthMode; 
     <main className="auth-layout">
       <section className="auth-story" aria-label="Keuangan Marindo Farm">
         <Link href="/login" className="brand brand-light">
-          <span className="brand-mark"><Sprout size={20} strokeWidth={2.2} /></span>
+          <span className="brand-mark brand-logo-mark"><Image src="/marindo-farm-mark.png" alt="" width={40} height={40} /></span>
           <span><strong>KEUANGAN</strong><small>MARINDO FARM</small></span>
         </Link>
         <div className="story-copy">

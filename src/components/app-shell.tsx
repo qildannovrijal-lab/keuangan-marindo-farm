@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   ArrowLeftRight,
@@ -77,7 +78,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {mobileOpen && <button className="mobile-scrim" aria-label="Tutup navigasi" onClick={() => setMobileOpen(false)} />}
       <aside className={`sidebar ${mobileOpen ? "sidebar-open" : ""}`}>
         <Link href="/dashboard" className="brand brand-sidebar" onClick={() => setMobileOpen(false)}>
-          <span className="brand-mark"><Sprout size={20} strokeWidth={2.2} /></span>
+          <span className="brand-mark brand-logo-mark"><Image src="/marindo-farm-mark.png" alt="" width={40} height={40} /></span>
           <span><strong>KEUANGAN</strong><small>MARINDO FARM</small></span>
         </Link>
         <div className="farm-switcher">
