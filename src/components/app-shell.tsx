@@ -59,7 +59,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   if (!ready || !user) {
     return (
       <div className="app-loading" role="status">
-        <span className="loading-mark"><Sprout size={22} /></span>
+        <span className="loading-mark"><Image src="/marindo-farm-mark.png" alt="" width={38} height={38} /></span>
         <span>Menyiapkan ruang usaha...</span>
       </div>
     );
@@ -83,7 +83,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span><strong>KEUANGAN</strong><small>MARINDO FARM</small></span>
         </Link>
         <div className="farm-switcher">
-          <span className="farm-avatar">{businessName.slice(0, 1).toUpperCase()}</span>
+          <span className="farm-avatar"><Image src="/marindo-farm-mark.png" alt="" width={34} height={34} /></span>
           <span className="farm-switch-copy"><small>RUANG USAHA</small><strong>{businessName}</strong></span>
           <ChevronDown size={15} className="switch-chevron" />
         </div>

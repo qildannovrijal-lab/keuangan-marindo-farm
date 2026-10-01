@@ -169,7 +169,7 @@ export function AuthForm({ mode, confirmationNotice = null }: { mode: AuthMode; 
         </div>
         <div className="auth-card">
           <div className="auth-heading">
-            <div className="auth-icon"><Sprout size={21} /></div>
+            <div className="auth-icon"><Image src="/marindo-farm-mark.png" alt="" width={40} height={40} /></div>
             <p className="eyebrow">KEUANGAN MARINDO FARM</p>
             <h2>{localDevelopment && mode === "login" ? "Buka ruang usaha" : mode === "login" ? "Masuk ke akun" : mode === "signup" ? "Daftar usaha" : mode === "forgot" ? "Lupa kata sandi?" : "Atur ulang kata sandi"}</h2>
             <p className="auth-intro">{localDevelopment && mode === "login" ? "Database SQLite lokal untuk penggunaan di komputer ini." : mode === "signup" ? "Buat ruang pencatatan khusus untuk usaha Anda." : mode === "login" ? "Lanjutkan mengelola catatan usaha Anda." : text.description}</p>
