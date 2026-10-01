@@ -13,6 +13,7 @@ import {
   Leaf,
   LogOut,
   Menu,
+  UserRound,
   Settings2,
   Sprout,
   Tags,
@@ -110,9 +111,19 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="sidebar-user">
           <span className="user-avatar">{user.email.slice(0, 1).toUpperCase()}</span>
           <span className="user-copy"><strong>{user.email.split("@")[0]}</strong><small>{user.email}</small></span>
-          <button className="logout-button" onClick={signOut} disabled={loggingOut} aria-label="Keluar" title="Keluar">
-            <LogOut size={16} />
-          </button>
+          <details className="profile-menu">
+            <summary className="profile-menu-trigger" aria-label="Buka menu profil" title="Menu profil">
+              <ChevronDown size={17} />
+            </summary>
+            <div className="profile-menu-popover">
+              <div className="profile-menu-heading"><UserRound size={16} /><span>Profil akun</span></div>
+              <div className="profile-menu-email">{user.email}</div>
+              <Link href="/pengaturan" onClick={() => setMobileOpen(false)} className="profile-menu-link"><Settings2 size={16} />Pengaturan usaha</Link>
+              <button className="profile-menu-logout" onClick={signOut} disabled={loggingOut}>
+                <LogOut size={16} />{loggingOut ? "Keluar..." : "Keluar dari akun"}
+              </button>
+            </div>
+          </details>
         </div>
       </aside>
 

@@ -162,8 +162,18 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .user-avatar { width: 32px; height: 32px; background: #486d58; color: #f6fbf6; font-size: 13px; }
 .user-copy strong { overflow: hidden; color: #f1f6f1; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .user-copy small { overflow: hidden; color: #8fa798; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
-.logout-button { display: grid; width: 30px; height: 30px; place-items: center; border: 0; border-radius: 7px; background: transparent; color: #a8b9ac; }
-.logout-button:hover { background: rgba(255,255,255,.08); color: #fff; }
+.profile-menu { position: relative; flex: 0 0 auto; }
+.profile-menu-trigger { display: grid; width: 30px; height: 30px; cursor: pointer; list-style: none; place-items: center; border-radius: 7px; color: #a8b9ac; }
+.profile-menu-trigger::-webkit-details-marker { display: none; }
+.profile-menu-trigger:hover, .profile-menu[open] .profile-menu-trigger { background: rgba(255,255,255,.08); color: #fff; }
+.profile-menu-popover { position: absolute; z-index: 80; right: 0; bottom: calc(100% + 10px); width: 240px; border: 1px solid #e2e9e3; border-radius: 11px; background: #fff; padding: 9px; color: var(--ink); box-shadow: 0 14px 36px rgba(17, 38, 25, .18); }
+.profile-menu-heading { display: flex; align-items: center; gap: 8px; padding: 8px 9px 5px; color: #315b40; font-size: 13px; font-weight: 700; }
+.profile-menu-email { overflow: hidden; padding: 2px 9px 10px; color: #7b887e; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.profile-menu-link, .profile-menu-logout { display: flex; width: 100%; min-height: 38px; align-items: center; gap: 9px; border: 0; border-radius: 7px; background: transparent; padding: 0 9px; color: #3f5144; font: inherit; font-size: 13px; text-align: left; }
+.profile-menu-link:hover { background: #f1f6f1; }
+.profile-menu-logout { border-top: 1px solid #edf0ed; border-radius: 0 0 7px 7px; color: #b33e37; cursor: pointer; }
+.profile-menu-logout:hover { background: #fff3f1; }
+.profile-menu-logout:disabled { cursor: wait; opacity: .65; }
 .app-main { display: flex; width: calc(100% - 252px); min-height: 100svh; flex-direction: column; margin-left: 252px; }
 .topbar { position: sticky; z-index: 15; top: 0; display: flex; min-height: 72px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.94); padding: 0 34px; backdrop-filter: blur(12px); }
 .topbar-title { display: flex; flex-direction: column; gap: 2px; }
