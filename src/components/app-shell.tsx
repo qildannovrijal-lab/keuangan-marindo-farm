@@ -85,7 +85,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="farm-switcher">
           <span className="farm-avatar"><Image src="/marindo-farm-mark.png" alt="" width={34} height={34} /></span>
           <span className="farm-switch-copy"><small>RUANG USAHA</small><strong>{businessName}</strong></span>
-          <ChevronDown size={15} className="switch-chevron" />
+          <button className="farm-logout-button" onClick={() => void signOut()} disabled={loggingOut} aria-label="Keluar dari akun" title="Keluar dari akun">
+            <LogOut size={15} />{loggingOut ? "Keluar..." : "Keluar"}
+          </button>
         </div>
         <p className="nav-caption">MENU UTAMA</p>
         <nav className="side-nav" aria-label="Navigasi utama">
