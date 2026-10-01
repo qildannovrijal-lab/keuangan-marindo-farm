@@ -29,7 +29,12 @@ export default function AuthCallbackPage() {
       const authError = params.get("error_description") ?? params.get("error");
       const tokenHash = params.get("token_hash");
       const otpType = params.get("type");
+      const isRecovery = params.get("next") === "/reset-password" || otpType === "recovery";
       if (authError) {
+        if (!isRecovery) {
+          window.location.replace("/login?confirmation=link");
+          return;
+        }
         if (active) {
           setMessage("Tautan konfirmasi ini sudah kedaluwarsa atau pernah dibuka. Coba masuk ke akun; jika berhasil, akun siap digunakan dan Anda tidak perlu tautan baru.");
           setFailed(true);
@@ -43,6 +48,10 @@ export default function AuthCallbackPage() {
           type: otpType as EmailOtpType,
         });
         if (error) {
+          if (otpType === "email") {
+            window.location.replace("/login?confirmation=link");
+            return;
+          }
           if (active) {
             setMessage("Tautan konfirmasi ini sudah kedaluwarsa atau pernah dibuka. Coba masuk ke akun; jika berhasil, akun siap digunakan dan Anda tidak perlu tautan baru.");
             setFailed(true);
@@ -55,6 +64,12 @@ export default function AuthCallbackPage() {
       if (!tokenHash && code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
+          if (!isRecovery) {
+            // Supabase has already verified the email before redirecting with this code.
+            // A PKCE verifier may be missing when the link was opened on another device.
+            window.location.replace("/login?confirmation=confirmed");
+            return;
+          }
           if (active) {
             setMessage("Tautan konfirmasi ini sudah kedaluwarsa, pernah dibuka, atau dibuka di perangkat lain. Coba masuk ke akun; jika berhasil, akun siap digunakan dan Anda tidak perlu tautan baru.");
             setFailed(true);
@@ -65,6 +80,10 @@ export default function AuthCallbackPage() {
 
       const { data, error } = await supabase.auth.getSession();
       if (error || !data.session) {
+        if (!isRecovery && (code || (tokenHash && otpType === "email"))) {
+          window.location.replace("/login?confirmation=confirmed");
+          return;
+        }
         if (active) {
           setMessage("Sesi tidak terbentuk dari tautan ini. Coba masuk ke akun; jika berhasil, akun siap digunakan. Jika belum, minta tautan konfirmasi baru.");
           setFailed(true);
@@ -72,8 +91,7 @@ export default function AuthCallbackPage() {
         return;
       }
 
-      const nextPath = params.get("next");
-      const destination = nextPath === "/reset-password" || otpType === "recovery" ? "/reset-password" : "/dashboard";
+      const destination = isRecovery ? "/reset-password" : "/dashboard";
       window.location.replace(destination);
     };
 

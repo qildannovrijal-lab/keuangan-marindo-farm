@@ -35,14 +35,48 @@ const copy: Record<AuthMode, { eyebrow: string; title: string; description: stri
   },
 };
 
-export function AuthForm({ mode }: { mode: AuthMode }) {
+type ConfirmationNotice = "confirmed" | "link";
+
+export function AuthForm({ mode, confirmationNotice = null }: { mode: AuthMode; confirmationNotice?: ConfirmationNotice | null }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [businessName, setBusinessName] = useState("Marindo Farm");
   const [showPassword, setShowPassword] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(confirmationNotice === "confirmed"
+    ? "Email sudah dikonfirmasi. Silakan masuk dengan email dan kata sandi Anda."
+    : confirmationNotice === "link"
+      ? "Tautan tidak berlaku atau sudah pernah dibuka. Coba masuk dahulu; jika belum bisa, kirim tautan baru."
+      : "");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const resendConfirmation = async () => {
+    setError("");
+    setBusy(true);
+    const parsed = loginSchema.shape.email.safeParse(email);
+    if (!parsed.success) {
+      setError("Masukkan alamat email yang digunakan saat mendaftar.");
+      setBusy(false);
+      return;
+    }
+    const supabase = createSupabaseBrowserClient();
+    if (!supabase) {
+      setError("Layanan login belum tersedia. Coba lagi nanti.");
+      setBusy(false);
+      return;
+    }
+    const { error: authError } = await supabase.auth.resend({
+      type: "signup",
+      email: parsed.data,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (authError) {
+      setError("Tautan belum bisa dikirim. Periksa alamat email lalu coba lagi.");
+    } else {
+      setMessage("Jika akun belum dikonfirmasi, tautan baru segera dikirim. Periksa kotak masuk dan folder spam.");
+    }
+    setBusy(false);
+  };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -157,6 +191,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
               </label>
             )}
             {mode === "login" && (!localMode || !localDevelopment) && <Link className="forgot-link" href="/lupa-password">Lupa kata sandi?</Link>}
+            {mode === "login" && confirmationNotice === "link" && <button className="forgot-link" type="button" onClick={() => void resendConfirmation()} disabled={busy}>Kirim ulang tautan konfirmasi</button>}
             {error && <p className="form-alert error-alert" role="alert">{error}</p>}
             {message && <p className="form-alert success-alert" role="status">{message}</p>}
             <button className="primary-button auth-submit" type="submit" disabled={busy || (localMode && !localDevelopment)}>
