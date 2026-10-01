@@ -123,6 +123,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .forgot-link { align-self: flex-end; margin-top: -8px; color: var(--forest); font-size: 13px; font-weight: 700; }
 .auth-submit { width: 100%; min-height: 46px; margin-top: 2px; }
 .auth-submit svg { margin-left: auto; }
+.confirmation-pending { display: flex; flex-direction: column; gap: 14px; }
+.confirmation-email-icon { display: grid; width: 48px; height: 48px; place-items: center; border: 1px solid #d9e8dc; border-radius: 13px; background: #f1f7f1; color: var(--forest); }
+.confirmation-pending h3 { margin: 0; color: #233b2b; font-family: "DM Sans Variable", sans-serif; font-size: 18px; font-weight: 650; }
+.confirmation-pending > p { margin: 0; color: #78847d; font-size: 13px; line-height: 1.7; }
+.confirmation-pending .confirmation-help { color: #8a958e; font-size: 12px; }
 .auth-switch { margin-top: 24px; color: #78847d; font-size: 13px; text-align: center; }
 .auth-switch a { margin-left: 4px; color: var(--forest); font-weight: 800; }
 .demo-note { margin: -5px 0 0; color: #7f897f; font-size: 13px; text-align: center; }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, Leaf, LockKeyhole, Mail, Sprout } from "lucide-react";
 import { createSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { loginSchema, signUpSchema } from "@/lib/validation";
@@ -50,6 +50,14 @@ export function AuthForm({ mode, confirmationNotice = null }: { mode: AuthMode; 
       : "");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirmationPending, setConfirmationPending] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(0);
+
+  useEffect(() => {
+    if (!confirmationPending || resendCountdown <= 0) return;
+    const timer = window.setTimeout(() => setResendCountdown((seconds) => Math.max(0, seconds - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [confirmationPending, resendCountdown]);
 
   const resendConfirmation = async () => {
     setError("");
@@ -75,6 +83,7 @@ export function AuthForm({ mode, confirmationNotice = null }: { mode: AuthMode; 
       setError("Tautan belum bisa dikirim. Periksa alamat email lalu coba lagi.");
     } else {
       setMessage("Jika akun belum dikonfirmasi, tautan baru segera dikirim. Periksa kotak masuk dan folder spam.");
+      if (confirmationPending) setResendCountdown(60);
     }
     setBusy(false);
   };
@@ -107,7 +116,7 @@ export function AuthForm({ mode, confirmationNotice = null }: { mode: AuthMode; 
       } else if (mode === "signup") {
         const parsed = signUpSchema.safeParse({ email, password, businessName });
         if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Periksa data pendaftaran.");
-        const { error: authError } = await supabase.auth.signUp({
+        const { data: signUpData, error: authError } = await supabase.auth.signUp({
           email: parsed.data.email,
           password: parsed.data.password,
           options: {
@@ -116,7 +125,13 @@ export function AuthForm({ mode, confirmationNotice = null }: { mode: AuthMode; 
           },
         });
         if (authError) throw authError;
-        setMessage("Akun berhasil dibuat. Periksa email Anda untuk konfirmasi sebelum masuk.");
+        if (signUpData.session) {
+          window.location.assign(new URL("/dashboard", window.location.origin));
+          return;
+        }
+        setConfirmationPending(true);
+        setResendCountdown(60);
+        setMessage(`Tautan konfirmasi sudah dikirim ke ${parsed.data.email}. Buka email tersebut untuk mengaktifkan akun. Setelah konfirmasi berhasil, Anda akan diarahkan ke aplikasi.`);
       } else if (mode === "forgot") {
         const parsed = loginSchema.shape.email.safeParse(email);
         if (!parsed.success) throw new Error("Masukkan email yang valid.");
@@ -147,7 +162,7 @@ export function AuthForm({ mode, confirmationNotice = null }: { mode: AuthMode; 
   return (
     <main className="auth-layout">
       <section className="auth-story" aria-label="Keuangan Marindo Farm">
-        <Link href="/login" className="brand brand-light">
+        <Link href="/login" className="brand brand-light" onClick={(event) => { if (confirmationPending) event.preventDefault(); }} aria-disabled={confirmationPending}>
           <span className="brand-mark brand-logo-mark"><Image src="/marindo-farm-mark.png" alt="" width={40} height={40} /></span>
           <span><strong>KEUANGAN</strong><small>MARINDO FARM</small></span>
         </Link>
@@ -164,18 +179,29 @@ export function AuthForm({ mode, confirmationNotice = null }: { mode: AuthMode; 
 
       <section className="auth-panel">
         <div className="auth-topline">
-          <Link href="/" className="back-link"><ArrowLeft size={16} /> Beranda</Link>
+          {confirmationPending ? <span /> : <Link href="/" className="back-link"><ArrowLeft size={16} /> Beranda</Link>}
           <span className="secure-label"><LockKeyhole size={13} /> Ruang usaha pribadi</span>
         </div>
         <div className="auth-card">
           <div className="auth-heading">
             <div className="auth-icon"><Image src="/marindo-farm-mark.png" alt="" width={40} height={40} /></div>
             <p className="eyebrow">KEUANGAN MARINDO FARM</p>
-            <h2>{localDevelopment && mode === "login" ? "Buka ruang usaha" : mode === "login" ? "Masuk ke akun" : mode === "signup" ? "Daftar usaha" : mode === "forgot" ? "Lupa kata sandi?" : "Atur ulang kata sandi"}</h2>
-            <p className="auth-intro">{localDevelopment && mode === "login" ? "Database SQLite lokal untuk penggunaan di komputer ini." : mode === "signup" ? "Buat ruang pencatatan khusus untuk usaha Anda." : mode === "login" ? "Lanjutkan mengelola catatan usaha Anda." : text.description}</p>
+            <h2>{confirmationPending ? "Konfirmasi email" : localDevelopment && mode === "login" ? "Buka ruang usaha" : mode === "login" ? "Masuk ke akun" : mode === "signup" ? "Daftar usaha" : mode === "forgot" ? "Lupa kata sandi?" : "Atur ulang kata sandi"}</h2>
+            <p className="auth-intro">{confirmationPending ? "Selesaikan konfirmasi untuk mengaktifkan akun." : localDevelopment && mode === "login" ? "Database SQLite lokal untuk penggunaan di komputer ini." : mode === "signup" ? "Buat ruang pencatatan khusus untuk usaha Anda." : mode === "login" ? "Lanjutkan mengelola catatan usaha Anda." : text.description}</p>
           </div>
 
-          <form className="auth-form" onSubmit={submit}>
+          {confirmationPending && mode === "signup" ? (
+            <div className="confirmation-pending" role="status" aria-live="polite">
+              <div className="confirmation-email-icon"><Mail size={22} /></div>
+              <h3>Buka tautan konfirmasi</h3>
+              <p>{message}</p>
+              <button className="primary-button auth-submit" type="button" onClick={() => void resendConfirmation()} disabled={busy || resendCountdown > 0}>
+                {busy ? "Mengirim tautan..." : resendCountdown > 0 ? `Kirim ulang dalam ${String(Math.floor(resendCountdown / 60)).padStart(2, "0")}:${String(resendCountdown % 60).padStart(2, "0")}` : "Kirim ulang konfirmasi"}
+              </button>
+              {error && <p className="form-alert error-alert" role="alert">{error}</p>}
+              <p className="confirmation-help">Buka tautan dari email untuk menyelesaikan pendaftaran. Periksa juga folder spam.</p>
+            </div>
+          ) : <form className="auth-form" onSubmit={submit}>
             {mode === "signup" && (
               <label className="field-label">Nama usaha
                 <span className="input-wrap"><Sprout size={17} /><input autoComplete="organization" value={businessName} onChange={(event) => setBusinessName(event.target.value)} placeholder="Marindo Farm" /></span>
@@ -200,11 +226,11 @@ export function AuthForm({ mode, confirmationNotice = null }: { mode: AuthMode; 
             </button>
             {localDevelopment && mode === "login" && <p className="demo-note">Database SQLite tersimpan di komputer ini. Untuk login dan akses dari mana saja, hubungkan Supabase.</p>}
             {localMode && !localDevelopment && <p className="form-alert error-alert" role="status">Aplikasi publik memerlukan Supabase. Set URL dan publishable key Supabase, lalu terapkan migration.</p>}
-          </form>
+          </form>}
 
-          <div className="auth-switch">
+          {!confirmationPending && <div className="auth-switch">
             {localDevelopment ? mode !== "login" && <Link href="/login">Kembali ke halaman database lokal</Link> : mode === "login" ? <>Belum punya akun? <Link href="/daftar">Daftar sekarang</Link></> : mode === "signup" ? <>Sudah memiliki akun? <Link href="/login">Masuk</Link></> : <Link href="/login">Kembali ke halaman masuk</Link>}
-          </div>
+          </div>}
         </div>
         <footer className="auth-footer"><span>© 2026 Keuangan Marindo Farm</span><span>Data usaha Anda, kendali Anda.</span></footer>
       </section>
