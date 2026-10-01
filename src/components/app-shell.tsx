@@ -13,7 +13,6 @@ import {
   Leaf,
   LogOut,
   Menu,
-  UserRound,
   Settings2,
   Sprout,
   Tags,
@@ -82,13 +81,19 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="brand-mark brand-logo-mark"><Image src="/marindo-farm-mark.png" alt="" width={40} height={40} /></span>
           <span><strong>KEUANGAN</strong><small>MARINDO FARM</small></span>
         </Link>
-        <div className="farm-switcher">
-          <span className="farm-avatar"><Image src="/marindo-farm-mark.png" alt="" width={34} height={34} /></span>
-          <span className="farm-switch-copy"><small>RUANG USAHA</small><strong>{businessName}</strong></span>
-          <button className="farm-logout-button" onClick={() => void signOut()} disabled={loggingOut} aria-label="Keluar dari akun" title="Keluar dari akun">
-            <LogOut size={15} />{loggingOut ? "Keluar..." : "Keluar"}
-          </button>
-        </div>
+        <details className="farm-switcher-menu">
+          <summary className="farm-switcher">
+            <span className="farm-avatar"><Image src="/marindo-farm-mark.png" alt="" width={34} height={34} /></span>
+            <span className="farm-switch-copy"><small>RUANG USAHA</small><strong>{businessName}</strong></span>
+            <ChevronDown size={15} className="switch-chevron" />
+          </summary>
+          <div className="farm-switcher-popover">
+            <div className="farm-switcher-account">Masuk sebagai<strong>{user.email}</strong></div>
+            <button className="farm-switcher-logout" onClick={() => void signOut()} disabled={loggingOut}>
+              <LogOut size={16} />{loggingOut ? "Keluar..." : "Keluar dari akun"}
+            </button>
+          </div>
+        </details>
         <p className="nav-caption">MENU UTAMA</p>
         <nav className="side-nav" aria-label="Navigasi utama">
           {mainLinks.map(({ href, label, icon: Icon }) => {
@@ -113,19 +118,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="sidebar-user">
           <span className="user-avatar">{user.email.slice(0, 1).toUpperCase()}</span>
           <span className="user-copy"><strong>{user.email.split("@")[0]}</strong><small>{user.email}</small></span>
-          <details className="profile-menu">
-            <summary className="profile-menu-trigger" aria-label="Buka menu profil" title="Menu profil">
-              <ChevronDown size={17} />
-            </summary>
-            <div className="profile-menu-popover">
-              <div className="profile-menu-heading"><UserRound size={16} /><span>Profil akun</span></div>
-              <div className="profile-menu-email">{user.email}</div>
-              <Link href="/pengaturan" onClick={() => setMobileOpen(false)} className="profile-menu-link"><Settings2 size={16} />Pengaturan usaha</Link>
-              <button className="profile-menu-logout" onClick={signOut} disabled={loggingOut}>
-                <LogOut size={16} />{loggingOut ? "Keluar..." : "Keluar dari akun"}
-              </button>
-            </div>
-          </details>
         </div>
       </aside>
 
