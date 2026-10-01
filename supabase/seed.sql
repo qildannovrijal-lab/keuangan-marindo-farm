@@ -1,0 +1,3 @@
+-- Data finansial tidak di-seed: setiap akun baru mulai dari transaksi, kandang,
+-- hutang/piutang, pembayaran, dan anggaran kosong. Profil serta kategori bawaan
+-- dibuat oleh trigger on_auth_user_created pada migration.
