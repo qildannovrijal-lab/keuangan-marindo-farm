@@ -31,7 +31,7 @@ export default function AuthCallbackPage() {
       const otpType = params.get("type");
       if (authError) {
         if (active) {
-          setMessage("Tautan konfirmasi tidak dapat digunakan. Coba masuk atau minta tautan konfirmasi baru.");
+          setMessage("Tautan konfirmasi ini sudah kedaluwarsa atau pernah dibuka. Coba masuk ke akun; jika berhasil, akun siap digunakan dan Anda tidak perlu tautan baru.");
           setFailed(true);
         }
         return;
@@ -44,7 +44,7 @@ export default function AuthCallbackPage() {
         });
         if (error) {
           if (active) {
-            setMessage("Tautan konfirmasi sudah kedaluwarsa atau pernah digunakan. Minta tautan baru di bawah.");
+            setMessage("Tautan konfirmasi ini sudah kedaluwarsa atau pernah dibuka. Coba masuk ke akun; jika berhasil, akun siap digunakan dan Anda tidak perlu tautan baru.");
             setFailed(true);
           }
           return;
@@ -56,7 +56,7 @@ export default function AuthCallbackPage() {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
           if (active) {
-            setMessage("Tautan konfirmasi sudah kedaluwarsa atau pernah digunakan. Masuk atau daftar ulang untuk menerima tautan baru.");
+            setMessage("Tautan konfirmasi ini sudah kedaluwarsa, pernah dibuka, atau dibuka di perangkat lain. Coba masuk ke akun; jika berhasil, akun siap digunakan dan Anda tidak perlu tautan baru.");
             setFailed(true);
           }
           return;
@@ -66,7 +66,7 @@ export default function AuthCallbackPage() {
       const { data, error } = await supabase.auth.getSession();
       if (error || !data.session) {
         if (active) {
-          setMessage("Sesi konfirmasi tidak ditemukan. Coba masuk; jika belum bisa, minta tautan konfirmasi baru.");
+          setMessage("Sesi tidak terbentuk dari tautan ini. Coba masuk ke akun; jika berhasil, akun siap digunakan. Jika belum, minta tautan konfirmasi baru.");
           setFailed(true);
         }
         return;
@@ -109,7 +109,7 @@ export default function AuthCallbackPage() {
         <div className="auth-card">
           <div className="auth-heading">
             <p className="eyebrow">KEUANGAN MARINDO FARM</p>
-            <h2>{failed ? "Konfirmasi belum selesai" : "Konfirmasi email"}</h2>
+            <h2>{failed ? "Tautan konfirmasi lama" : "Konfirmasi email"}</h2>
             <p className="auth-intro" role={failed ? "alert" : "status"}>{message}</p>
           </div>
           {failed && <>
