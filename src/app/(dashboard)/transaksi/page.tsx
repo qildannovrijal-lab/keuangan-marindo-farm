@@ -300,21 +300,21 @@ export default function TransactionsPage() {
         <div className="intro-actions">
           <button
             type="button"
-            className="secondary-button compact-button"
+            className="secondary-button compact-button btn-export-excel"
             onClick={handleExportExcel}
             title="Unduh data terfilter ke format Excel"
           >
             <FileSpreadsheet size={16} />
-            Excel
+            Ekspor Excel
           </button>
           <button
             type="button"
-            className="secondary-button compact-button"
+            className="secondary-button compact-button btn-export-pdf"
             onClick={handleExportPdf}
             title="Unduh data terfilter ke format PDF"
           >
             <FileText size={16} />
-            PDF
+            Ekspor PDF
           </button>
           <button className="primary-button compact-button" onClick={openCreate}>
             <CirclePlus size={17} />
