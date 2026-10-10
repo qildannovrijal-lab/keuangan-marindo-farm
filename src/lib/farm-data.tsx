@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { createEmptyFarmData } from "@/lib/demo-data";
+import { createDemoFarmData, createEmptyFarmData } from "@/lib/demo-data";
 import type {
   Budget,
   Category,
@@ -32,6 +32,9 @@ type FarmContextValue = {
   ready: boolean;
   mode: "local" | "supabase";
   error: string;
+  switchMode: (targetMode: "local" | "supabase") => void;
+  importBackupData: (nextData: FarmData) => Promise<void>;
+  resetToDemoData: () => Promise<void>;
   addTransaction: (input: TransactionInput) => Promise<void>;
   updateTransaction: (id: string, input: TransactionInput) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
@@ -54,7 +57,11 @@ type FarmContextValue = {
 const FarmContext = createContext<FarmContextValue | null>(null);
 
 const createId = () => crypto.randomUUID();
-const localUser: FarmUser = { id: "00000000-0000-4000-8000-000000000001", email: "lokal@marindofarm.id", businessName: "Marindo Farm" };
+const localUser: FarmUser = {
+  id: "00000000-0000-4000-8000-000000000001",
+  email: "lokal@marindofarm.id",
+  businessName: "Marindo Farm",
+};
 
 const mapRemoteData = (
   profile: Profile | null,
@@ -81,39 +88,59 @@ const mapRemoteData = (
   budgets: budgets ?? [],
 });
 
-const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
-  const reader = new FileReader();
-  reader.onload = () => resolve(String(reader.result));
-  reader.onerror = () => reject(new Error("Lampiran tidak dapat dibaca."));
-  reader.readAsDataURL(file);
-});
+const fileToDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Lampiran tidak dapat dibaca."));
+    reader.readAsDataURL(file);
+  });
 
 export function FarmDataProvider({ children }: { children: ReactNode }) {
   const [supabase] = useState(createSupabaseBrowserClient);
   const [data, setData] = useState<FarmData>(() => createEmptyFarmData());
   const [user, setUser] = useState<FarmUser | null>(null);
-  const mode = isSupabaseConfigured ? "supabase" : "local";
+  const [mode, setMode] = useState<"local" | "supabase">(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("marindo_active_mode");
+      if (stored === "local" || stored === "supabase") return stored;
+    }
+    return isSupabaseConfigured ? "supabase" : "local";
+  });
   const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
 
+  const switchMode = (targetMode: "local" | "supabase") => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("marindo_active_mode", targetMode);
+    }
+    setMode(targetMode);
+    setReady(false);
+    setError("");
+  };
+
   useEffect(() => {
-    const client = supabase;
     let alive = true;
 
-    if (!client) {
+    if (mode === "local" || !supabase) {
       const loadLocalDatabase = async () => {
-        if (process.env.NODE_ENV === "production") {
-          setError("Login online belum aktif. Hubungkan Supabase sebelum aplikasi dipublikasikan.");
-          if (alive) setReady(true);
-          return;
-        }
         try {
           const response = await fetch("/api/local-data", { cache: "no-store" });
           if (!response.ok) throw new Error("Database SQLite tidak dapat dibuka.");
-          setData(await response.json() as FarmData);
-          setUser(localUser);
+          const localData = (await response.json()) as FarmData;
+          if (alive) {
+            setData(localData);
+            setUser({
+              id: localUser.id,
+              email: localUser.email,
+              businessName: localData.profile?.business_name || localUser.businessName,
+            });
+            setError("");
+          }
         } catch (caught) {
-          setError(caught instanceof Error ? caught.message : "Database lokal tidak dapat dibuka.");
+          if (alive) {
+            setError(caught instanceof Error ? caught.message : "Database lokal tidak dapat dibuka.");
+          }
         }
         if (alive) setReady(true);
       };
@@ -124,7 +151,7 @@ export function FarmDataProvider({ children }: { children: ReactNode }) {
     }
 
     const loadSession = async () => {
-      const { data: authData, error: authError } = await client.auth.getUser();
+      const { data: authData, error: authError } = await supabase.auth.getUser();
       if (!alive) return;
       if (authError || !authData.user) {
         setUser(null);
@@ -136,17 +163,17 @@ export function FarmDataProvider({ children }: { children: ReactNode }) {
       setUser({
         id: authUser.id,
         email: authUser.email ?? "",
-        businessName: String(authUser.user_metadata.business_name ?? "Marindo Farm"),
+        businessName: String(authUser.user_metadata?.business_name ?? "Marindo Farm"),
       });
 
       const results = await Promise.all([
-        client.from("profiles").select("*").maybeSingle(),
-        client.from("categories").select("*").order("name"),
-        client.from("pens").select("*").order("start_date", { ascending: false }),
-      client.from("transactions").select("*").order("transaction_date", { ascending: false }),
-        client.from("debts").select("*").order("due_date", { ascending: true }),
-        client.from("debt_payments").select("*").order("payment_date", { ascending: false }),
-        client.from("budgets").select("*").order("period_month", { ascending: false }),
+        supabase.from("profiles").select("*").maybeSingle(),
+        supabase.from("categories").select("*").order("name"),
+        supabase.from("pens").select("*").order("start_date", { ascending: false }),
+        supabase.from("transactions").select("*").order("transaction_date", { ascending: false }),
+        supabase.from("debts").select("*").order("due_date", { ascending: true }),
+        supabase.from("debt_payments").select("*").order("payment_date", { ascending: false }),
+        supabase.from("budgets").select("*").order("period_month", { ascending: false }),
       ]);
 
       if (!alive) return;
@@ -171,7 +198,7 @@ export function FarmDataProvider({ children }: { children: ReactNode }) {
     };
 
     void loadSession();
-    const { data: authListener } = client.auth.onAuthStateChange((_event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
         setUser(null);
         return;
@@ -179,7 +206,7 @@ export function FarmDataProvider({ children }: { children: ReactNode }) {
       setUser({
         id: session.user.id,
         email: session.user.email ?? "",
-        businessName: String(session.user.user_metadata.business_name ?? "Marindo Farm"),
+        businessName: String(session.user.user_metadata?.business_name ?? "Marindo Farm"),
       });
     });
 
@@ -187,7 +214,7 @@ export function FarmDataProvider({ children }: { children: ReactNode }) {
       alive = false;
       authListener.subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [mode, supabase]);
 
   const commit = async (nextData: FarmData, writes: Array<() => Promise<void>>) => {
     if (mode === "local") {
@@ -197,7 +224,7 @@ export function FarmDataProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify(nextData),
       });
       if (!response.ok) {
-        const result = await response.json().catch(() => null) as { error?: string } | null;
+        const result = (await response.json().catch(() => null)) as { error?: string } | null;
         throw new Error(result?.error ?? "Data belum berhasil disimpan ke database lokal.");
       }
       setData(nextData);
@@ -215,6 +242,19 @@ export function FarmDataProvider({ children }: { children: ReactNode }) {
     if (result.error) throw new Error(result.error.message);
   };
 
+  const importBackupData = async (nextData: FarmData) => {
+    await commit(nextData, []);
+  };
+
+  const resetToDemoData = async () => {
+    const demo = createDemoFarmData();
+    if (user) {
+      demo.profile.id = user.id;
+      demo.profile.business_name = user.businessName || "Marindo Farm";
+    }
+    await commit(demo, []);
+  };
+
   const addTransaction = async (input: TransactionInput) => {
     if (!user) throw new Error("Sesi masuk tidak ditemukan.");
     const row: FarmTransaction = {
@@ -224,46 +264,102 @@ export function FarmDataProvider({ children }: { children: ReactNode }) {
       created_at: new Date().toISOString(),
       deleted_at: null,
     };
-    await commit({ ...data, transactions: [row, ...data.transactions] }, [() => persist("transactions", row as unknown as Record<string, unknown>)]);
+    await commit({ ...data, transactions: [row, ...data.transactions] }, [
+      () => persist("transactions", row as unknown as Record<string, unknown>),
+    ]);
   };
 
   const updateTransaction = async (id: string, input: TransactionInput) => {
-    await commit({ ...data, transactions: data.transactions.map((item) => item.id === id ? { ...item, ...input } : item) }, [() => persist("transactions", input as unknown as Record<string, unknown>, id)]);
+    await commit(
+      {
+        ...data,
+        transactions: data.transactions.map((item) =>
+          item.id === id ? { ...item, ...input } : item,
+        ),
+      },
+      [() => persist("transactions", input as unknown as Record<string, unknown>, id)],
+    );
   };
 
   const deleteTransaction = async (id: string) => {
     const deletedAt = new Date().toISOString();
-    await commit({ ...data, transactions: data.transactions.map((item) => item.id === id ? { ...item, deleted_at: deletedAt } : item) }, [() => persist("transactions", { deleted_at: deletedAt }, id)]);
+    await commit(
+      {
+        ...data,
+        transactions: data.transactions.map((item) =>
+          item.id === id ? { ...item, deleted_at: deletedAt } : item,
+        ),
+      },
+      [() => persist("transactions", { deleted_at: deletedAt }, id)],
+    );
   };
 
   const addCategory = async (input: CategoryInput) => {
     if (!user) throw new Error("Sesi masuk tidak ditemukan.");
-    const row: Category = { ...input, id: createId(), user_id: user.id, is_default: false, deleted_at: null };
-    await commit({ ...data, categories: [...data.categories, row] }, [() => persist("categories", row as unknown as Record<string, unknown>)]);
+    const row: Category = {
+      ...input,
+      id: createId(),
+      user_id: user.id,
+      is_default: false,
+      deleted_at: null,
+    };
+    await commit({ ...data, categories: [...data.categories, row] }, [
+      () => persist("categories", row as unknown as Record<string, unknown>),
+    ]);
   };
 
   const updateCategory = async (id: string, name: string) => {
-    await commit({ ...data, categories: data.categories.map((item) => item.id === id ? { ...item, name } : item) }, [() => persist("categories", { name }, id)]);
+    await commit(
+      {
+        ...data,
+        categories: data.categories.map((item) => (item.id === id ? { ...item, name } : item)),
+      },
+      [() => persist("categories", { name }, id)],
+    );
   };
 
   const deleteCategory = async (id: string) => {
     const deletedAt = new Date().toISOString();
-    await commit({ ...data, categories: data.categories.map((item) => item.id === id ? { ...item, deleted_at: deletedAt } : item) }, [() => persist("categories", { deleted_at: deletedAt }, id)]);
+    await commit(
+      {
+        ...data,
+        categories: data.categories.map((item) =>
+          item.id === id ? { ...item, deleted_at: deletedAt } : item,
+        ),
+      },
+      [() => persist("categories", { deleted_at: deletedAt }, id)],
+    );
   };
 
   const addPen = async (input: PenInput) => {
     if (!user) throw new Error("Sesi masuk tidak ditemukan.");
     const row: Pen = { ...input, id: createId(), user_id: user.id, deleted_at: null };
-    await commit({ ...data, pens: [...data.pens, row] }, [() => persist("pens", row as unknown as Record<string, unknown>)]);
+    await commit({ ...data, pens: [...data.pens, row] }, [
+      () => persist("pens", row as unknown as Record<string, unknown>),
+    ]);
   };
 
   const updatePen = async (id: string, input: PenInput) => {
-    await commit({ ...data, pens: data.pens.map((item) => item.id === id ? { ...item, ...input } : item) }, [() => persist("pens", input as unknown as Record<string, unknown>, id)]);
+    await commit(
+      {
+        ...data,
+        pens: data.pens.map((item) => (item.id === id ? { ...item, ...input } : item)),
+      },
+      [() => persist("pens", input as unknown as Record<string, unknown>, id)],
+    );
   };
 
   const deletePen = async (id: string) => {
     const deletedAt = new Date().toISOString();
-    await commit({ ...data, pens: data.pens.map((item) => item.id === id ? { ...item, deleted_at: deletedAt } : item) }, [() => persist("pens", { deleted_at: deletedAt }, id)]);
+    await commit(
+      {
+        ...data,
+        pens: data.pens.map((item) =>
+          item.id === id ? { ...item, deleted_at: deletedAt } : item,
+        ),
+      },
+      [() => persist("pens", { deleted_at: deletedAt }, id)],
+    );
   };
 
   const addDebt = async (input: DebtInput) => {
@@ -277,7 +373,9 @@ export function FarmDataProvider({ children }: { children: ReactNode }) {
       status: "unpaid",
       created_at: new Date().toISOString(),
     };
-    await commit({ ...data, debts: [row, ...data.debts] }, [() => persist("debts", row as unknown as Record<string, unknown>)]);
+    await commit({ ...data, debts: [row, ...data.debts] }, [
+      () => persist("debts", row as unknown as Record<string, unknown>),
+    ]);
   };
 
   const addDebtPayment = async (input: Omit<DebtPayment, "id" | "user_id">) => {
@@ -286,17 +384,42 @@ export function FarmDataProvider({ children }: { children: ReactNode }) {
     const debt = data.debts.find((item) => item.id === input.debt_id);
     if (!debt) throw new Error("Catatan hutang/piutang tidak ditemukan.");
     const paidAmount = Math.min(debt.amount, debt.paid_amount + Number(input.amount));
-    const updatedDebt = { ...debt, paid_amount: paidAmount, status: paidAmount >= debt.amount ? "paid" as const : "partial" as const };
-    const category = data.categories.find((item) => item.kind === (debt.kind === "payable" ? "expense" : "income") && !item.deleted_at && item.name === "Lain-lain")
-      ?? data.categories.find((item) => item.kind === (debt.kind === "payable" ? "expense" : "income") && !item.deleted_at);
-    const cashTransaction: FarmTransaction | null = category ? {
-      id: createId(), user_id: user.id, transaction_date: input.payment_date,
-      kind: debt.kind === "payable" ? "expense" : "income", category_id: category.id,
-      amount: Number(input.amount), description: `${debt.kind === "payable" ? "Pembayaran hutang" : "Penerimaan piutang"}: ${debt.party_name}`,
-      payment_method: input.payment_method, pen_id: null, attachment_path: null, note: input.note,
-      deleted_at: null, created_at: new Date().toISOString(),
-    } : null;
-    if (mode === "local" && !cashTransaction) throw new Error("Kategori transaksi tidak tersedia untuk mencatat pembayaran.");
+    const updatedDebt = {
+      ...debt,
+      paid_amount: paidAmount,
+      status: paidAmount >= debt.amount ? ("paid" as const) : ("partial" as const),
+    };
+    const category =
+      data.categories.find(
+        (item) =>
+          item.kind === (debt.kind === "payable" ? "expense" : "income") &&
+          !item.deleted_at &&
+          item.name === "Lain-lain",
+      ) ??
+      data.categories.find(
+        (item) =>
+          item.kind === (debt.kind === "payable" ? "expense" : "income") && !item.deleted_at,
+      );
+    const cashTransaction: FarmTransaction | null = category
+      ? {
+          id: createId(),
+          user_id: user.id,
+          transaction_date: input.payment_date,
+          kind: debt.kind === "payable" ? "expense" : "income",
+          category_id: category.id,
+          amount: Number(input.amount),
+          description: `${debt.kind === "payable" ? "Pembayaran hutang" : "Penerimaan piutang"}: ${debt.party_name}`,
+          payment_method: input.payment_method,
+          pen_id: null,
+          attachment_path: null,
+          note: input.note,
+          deleted_at: null,
+          created_at: new Date().toISOString(),
+        }
+      : null;
+    if (mode === "local" && !cashTransaction) {
+      throw new Error("Kategori transaksi tidak tersedia untuk mencatat pembayaran.");
+    }
     const paymentWrite = async () => {
       if (mode !== "supabase" || !supabase) return;
       const { data: result, error: writeError } = await supabase.rpc("record_debt_payment", {
@@ -310,32 +433,55 @@ export function FarmDataProvider({ children }: { children: ReactNode }) {
       if (cashTransaction && result?.transaction_id) cashTransaction.id = String(result.transaction_id);
       if (result?.payment_id) row.id = String(result.payment_id);
     };
-    await commit({
-      ...data,
-      debtPayments: [row, ...data.debtPayments],
-      debts: data.debts.map((item) => item.id === debt.id ? updatedDebt : item),
-      transactions: cashTransaction ? [cashTransaction, ...data.transactions] : data.transactions,
-    }, [paymentWrite]);
+    await commit(
+      {
+        ...data,
+        debtPayments: [row, ...data.debtPayments],
+        debts: data.debts.map((item) => (item.id === debt.id ? updatedDebt : item)),
+        transactions: cashTransaction ? [cashTransaction, ...data.transactions] : data.transactions,
+      },
+      [paymentWrite],
+    );
   };
 
-  const addBudget = async (input: Pick<Budget, "category_id" | "period_month" | "target_amount">) => {
+  const addBudget = async (
+    input: Pick<Budget, "category_id" | "period_month" | "target_amount">,
+  ) => {
     if (!user) throw new Error("Sesi masuk tidak ditemukan.");
-    const existing = data.budgets.find((item) => item.category_id === input.category_id && item.period_month === input.period_month);
+    const existing = data.budgets.find(
+      (item) =>
+        item.category_id === input.category_id && item.period_month === input.period_month,
+    );
     if (existing) {
-      await commit({ ...data, budgets: data.budgets.map((item) => item.id === existing.id ? { ...item, target_amount: input.target_amount } : item) }, [() => persist("budgets", { target_amount: input.target_amount }, existing.id)]);
+      await commit(
+        {
+          ...data,
+          budgets: data.budgets.map((item) =>
+            item.id === existing.id ? { ...item, target_amount: input.target_amount } : item,
+          ),
+        },
+        [() => persist("budgets", { target_amount: input.target_amount }, existing.id)],
+      );
       return;
     }
     const row: Budget = { ...input, id: createId(), user_id: user.id };
     const budgetWrite = async () => {
       if (mode !== "supabase" || !supabase) return;
-      const result = await supabase.from("budgets").upsert(row, { onConflict: "user_id,category_id,period_month" });
+      const result = await supabase
+        .from("budgets")
+        .upsert(row, { onConflict: "user_id,category_id,period_month" });
       if (result.error) throw new Error(result.error.message);
     };
     await commit({ ...data, budgets: [...data.budgets, row] }, [budgetWrite]);
   };
 
-  const updateProfile = async (input: Pick<Profile, "business_name" | "address" | "logo_path">) => {
-    await commit({ ...data, profile: { ...data.profile, ...input } }, [() => persist("profiles", input as unknown as Record<string, unknown>, data.profile.id)]);
+  const updateProfile = async (
+    input: Pick<Profile, "business_name" | "address" | "logo_path">,
+  ) => {
+    await commit(
+      { ...data, profile: { ...data.profile, ...input } },
+      [() => persist("profiles", input as unknown as Record<string, unknown>, data.profile.id)],
+    );
   };
 
   const uploadAsset = async (file: File, bucketFolder: "receipts" | "logos") => {
@@ -347,7 +493,9 @@ export function FarmDataProvider({ children }: { children: ReactNode }) {
 
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
     const path = `${user.id}/${bucketFolder}/${createId()}-${safeName}`;
-    const { error: uploadError } = await supabase.storage.from("farm-assets").upload(path, file, { upsert: false });
+    const { error: uploadError } = await supabase.storage
+      .from("farm-assets")
+      .upload(path, file, { upsert: false });
     if (uploadError) throw new Error(uploadError.message);
     return path;
   };
@@ -356,15 +504,22 @@ export function FarmDataProvider({ children }: { children: ReactNode }) {
     if (!path) return null;
     if (path.startsWith("data:image/")) return path;
     if (!supabase) return null;
-    const { data: asset, error: assetError } = await supabase.storage.from("farm-assets").createSignedUrl(path, 3600);
+    const { data: asset, error: assetError } = await supabase.storage
+      .from("farm-assets")
+      .createSignedUrl(path, 3600);
     if (assetError) return null;
     return asset.signedUrl;
   };
 
   const openAsset = async (path: string) => {
-    if (path.startsWith("data:image/")) { window.open(path, "_blank", "noopener,noreferrer"); return; }
+    if (path.startsWith("data:image/")) {
+      window.open(path, "_blank", "noopener,noreferrer");
+      return;
+    }
     if (!supabase) throw new Error("Sesi Supabase belum tersedia.");
-    const { data: asset, error: assetError } = await supabase.storage.from("farm-assets").createSignedUrl(path, 60);
+    const { data: asset, error: assetError } = await supabase.storage
+      .from("farm-assets")
+      .createSignedUrl(path, 60);
     if (assetError) throw new Error(assetError.message);
     window.open(asset.signedUrl, "_blank", "noopener,noreferrer");
   };
@@ -378,30 +533,35 @@ export function FarmDataProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <FarmContext.Provider value={{
-      data,
-      user,
-      ready,
-      mode,
-      error,
-      addTransaction,
-      updateTransaction,
-      deleteTransaction,
-      addCategory,
-      updateCategory,
-      deleteCategory,
-      addPen,
-      updatePen,
-      deletePen,
-      addDebt,
-      addDebtPayment,
-      addBudget,
-      updateProfile,
-      uploadAsset,
-      getAssetUrl,
-      openAsset,
-      logout,
-    }}>
+    <FarmContext.Provider
+      value={{
+        data,
+        user,
+        ready,
+        mode,
+        error,
+        switchMode,
+        importBackupData,
+        resetToDemoData,
+        addTransaction,
+        updateTransaction,
+        deleteTransaction,
+        addCategory,
+        updateCategory,
+        deleteCategory,
+        addPen,
+        updatePen,
+        deletePen,
+        addDebt,
+        addDebtPayment,
+        addBudget,
+        updateProfile,
+        uploadAsset,
+        getAssetUrl,
+        openAsset,
+        logout,
+      }}
+    >
       {children}
     </FarmContext.Provider>
   );

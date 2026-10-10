@@ -1,13 +1,23 @@
 import ExcelJS from "exceljs";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { formatDate } from "@/lib/format";
+import { formatCurrency, formatDate } from "@/lib/format";
+import type { Debt, DebtPayment, FarmTransaction } from "@/lib/domain";
 
 export type ExportCell = string | number;
 export type ExportTable = { title: string; columns: string[]; rows: ExportCell[][] };
-export type ReportExport = { businessName: string; period: string; title: string; tables: ExportTable[] };
+export type ReportExport = {
+  businessName: string;
+  period: string;
+  title: string;
+  tables: ExportTable[];
+};
 
-const filenamePart = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const filenamePart = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 
 export async function downloadReportExcel(report: ReportExport) {
   const workbook = new ExcelJS.Workbook();
@@ -22,7 +32,7 @@ export async function downloadReportExcel(report: ReportExport) {
     sheet.getCell("A1").value = report.businessName;
     sheet.getCell("A1").font = { bold: true, size: 16, color: { argb: "FF174B36" } };
     sheet.mergeCells(`A2:${lastColumn}2`);
-    sheet.getCell("A2").value = `${report.title} · ${table.title}`;
+    sheet.getCell("A2").value = `${report.title} — ${table.title}`;
     sheet.getCell("A2").font = { bold: true, size: 12 };
     sheet.mergeCells(`A3:${lastColumn}3`);
     sheet.getCell("A3").value = `Periode: ${report.period}  |  Dicetak: ${formatDate(new Date())}`;
@@ -32,20 +42,26 @@ export async function downloadReportExcel(report: ReportExport) {
     header.font = { bold: true, color: { argb: "FFFFFFFF" } };
     header.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF174B36" } };
     table.rows.forEach((row) => sheet.addRow(row));
-    table.columns.forEach((column, index) => {
-      sheet.getColumn(index + 1).width = Math.max(16, Math.min(34, column.length + 5));
+    table.columns.forEach((column, colIdx) => {
+      sheet.getColumn(colIdx + 1).width = Math.max(16, Math.min(34, column.length + 5));
     });
     sheet.views = [{ state: "frozen", ySplit: 5 }];
     sheet.autoFilter = { from: { row: 5, column: 1 }, to: { row: 5, column: table.columns.length } };
     sheet.eachRow((row, rowNumber) => {
-      if (rowNumber > 5) row.eachCell((cell) => {
-        if (typeof cell.value === "number") cell.numFmt = '"Rp" #,##0;[Red]-"Rp" #,##0';
-      });
+      if (rowNumber > 5) {
+        row.eachCell((cell) => {
+          if (typeof cell.value === "number") {
+            cell.numFmt = '"Rp" #,##0;[Red]-"Rp" #,##0';
+          }
+        });
+      }
     });
   });
 
   const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer as BlobPart], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const blob = new Blob([buffer as BlobPart], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
@@ -65,7 +81,7 @@ export function downloadReportPdf(report: ReportExport) {
     document.setFontSize(16);
     document.text(report.businessName, 14, 17);
     document.setFontSize(11);
-    document.text(`${report.title} · ${table.title}`, 14, 25);
+    document.text(`${report.title} — ${table.title}`, 14, 25);
     document.setTextColor(100, 115, 106);
     document.setFont("helvetica", "normal");
     document.setFontSize(9);
@@ -95,4 +111,149 @@ export async function downloadBackupExcel(
     title: "Backup Data Marindo Farm",
     tables,
   });
+}
+
+export async function downloadTransactionsExcel(
+  businessName: string,
+  transactions: FarmTransaction[],
+  categoryLookup: Map<string, string>,
+  penLookup: Map<string, string>,
+) {
+  const methodNames: Record<string, string> = { cash: "Tunai", transfer: "Transfer", qris: "QRIS" };
+  const rows: ExportCell[][] = transactions.map((t) => [
+    formatDate(t.transaction_date),
+    t.kind === "income" ? "Pemasukan" : "Pengeluaran",
+    categoryLookup.get(t.category_id) ?? "Lain-lain",
+    t.description,
+    t.pen_id ? penLookup.get(t.pen_id) ?? "-" : "-",
+    methodNames[t.payment_method] ?? t.payment_method,
+    Number(t.amount),
+    t.note || "-",
+  ]);
+
+  const totalIncome = transactions.filter((t) => t.kind === "income").reduce((s, t) => s + Number(t.amount), 0);
+  const totalExpense = transactions.filter((t) => t.kind === "expense").reduce((s, t) => s + Number(t.amount), 0);
+
+  rows.push(["", "", "", "TOTAL PEMASUKAN", "", "", totalIncome, ""]);
+  rows.push(["", "", "", "TOTAL PENGELUARAN", "", "", totalExpense, ""]);
+  rows.push(["", "", "", "ARUS KAS BERSIH", "", "", totalIncome - totalExpense, ""]);
+
+  await downloadReportExcel({
+    businessName,
+    period: `Unduh ${formatDate(new Date())}`,
+    title: "Daftar Transaksi",
+    tables: [
+      {
+        title: "Daftar Transaksi",
+        columns: ["Tanggal", "Jenis", "Kategori", "Deskripsi", "Kandang", "Metode", "Nominal", "Catatan"],
+        rows,
+      },
+    ],
+  });
+}
+
+export function downloadTransactionsPdf(
+  businessName: string,
+  transactions: FarmTransaction[],
+  categoryLookup: Map<string, string>,
+  penLookup: Map<string, string>,
+) {
+  const methodNames: Record<string, string> = { cash: "Tunai", transfer: "Transfer", qris: "QRIS" };
+  const rows: ExportCell[][] = transactions.map((t) => [
+    formatDate(t.transaction_date),
+    t.kind === "income" ? "Pemasukan" : "Pengeluaran",
+    categoryLookup.get(t.category_id) ?? "Lain-lain",
+    t.description,
+    t.pen_id ? penLookup.get(t.pen_id) ?? "-" : "-",
+    methodNames[t.payment_method] ?? t.payment_method,
+    formatCurrency(Number(t.amount)),
+  ]);
+
+  const totalIncome = transactions.filter((t) => t.kind === "income").reduce((s, t) => s + Number(t.amount), 0);
+  const totalExpense = transactions.filter((t) => t.kind === "expense").reduce((s, t) => s + Number(t.amount), 0);
+
+  rows.push(["", "", "", "TOTAL PEMASUKAN", "", "", formatCurrency(totalIncome)]);
+  rows.push(["", "", "", "TOTAL PENGELUARAN", "", "", formatCurrency(totalExpense)]);
+  rows.push(["", "", "", "ARUS KAS BERSIH", "", "", formatCurrency(totalIncome - totalExpense)]);
+
+  const document = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  document.setTextColor(23, 75, 54);
+  document.setFont("helvetica", "bold");
+  document.setFontSize(16);
+  document.text(businessName, 14, 17);
+  document.setFontSize(11);
+  document.text("Daftar Transaksi Keuangan", 14, 25);
+  document.setTextColor(100, 115, 106);
+  document.setFont("helvetica", "normal");
+  document.setFontSize(9);
+  document.text(`Dicetak: ${formatDate(new Date())} | Total Data: ${transactions.length}`, 14, 31);
+
+  autoTable(document, {
+    startY: 37,
+    head: [["Tanggal", "Jenis", "Kategori", "Deskripsi", "Kandang", "Metode", "Nominal"]],
+    body: rows,
+    theme: "grid",
+    styles: { font: "helvetica", fontSize: 8, cellPadding: 2, textColor: [34, 54, 43] },
+    headStyles: { fillColor: [23, 75, 54], textColor: [255, 255, 255], fontStyle: "bold" },
+    alternateRowStyles: { fillColor: [244, 247, 244] },
+    margin: { left: 14, right: 14 },
+  });
+
+  document.save(`transaksi-${businessName.toLowerCase().replace(/[^a-z0-9]/g, "-")}.pdf`);
+}
+
+export function downloadDebtReceiptPdf(
+  businessName: string,
+  debt: Debt,
+  payment: DebtPayment,
+) {
+  const document = new jsPDF({ orientation: "portrait", unit: "mm", format: "a5" });
+  const methodNames: Record<string, string> = { cash: "Tunai", transfer: "Transfer", qris: "QRIS" };
+
+  // Header
+  document.setTextColor(23, 75, 54);
+  document.setFont("helvetica", "bold");
+  document.setFontSize(16);
+  document.text(businessName, 14, 18);
+  document.setFontSize(11);
+  document.text(
+    debt.kind === "payable" ? "BUKTI PEMBAYARAN HUTANG" : "BUKTI PENERIMAAN PIUTANG",
+    14,
+    26,
+  );
+  document.setDrawColor(23, 75, 54);
+  document.setLineWidth(0.5);
+  document.line(14, 30, 134, 30);
+
+  // Content
+  document.setTextColor(40, 50, 45);
+  document.setFont("helvetica", "normal");
+  document.setFontSize(9);
+
+  let y = 38;
+  const addRow = (label: string, val: string) => {
+    document.setFont("helvetica", "bold");
+    document.text(label, 14, y);
+    document.setFont("helvetica", "normal");
+    document.text(val, 60, y);
+    y += 7;
+  };
+
+  addRow("Tanggal Pembayaran", formatDate(payment.payment_date));
+  addRow("Pihak Terkait", debt.party_name);
+  addRow("Keterangan Tagihan", debt.description);
+  addRow("Metode Bayar", methodNames[payment.payment_method] ?? payment.payment_method);
+  addRow("Jumlah Dibayar", formatCurrency(Number(payment.amount)));
+  addRow("Sisa Tagihan Sekarang", formatCurrency(Math.max(0, Number(debt.amount) - Number(debt.paid_amount))));
+  if (payment.note) {
+    addRow("Catatan", payment.note);
+  }
+
+  y += 10;
+  document.setFont("helvetica", "italic");
+  document.setFontSize(8);
+  document.setTextColor(110, 125, 115);
+  document.text(`Dokumen resmi dibuat otomatis oleh Sistem Keuangan ${businessName}.`, 14, y);
+
+  document.save(`kwitansi-${debt.party_name.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${payment.payment_date}.pdf`);
 }

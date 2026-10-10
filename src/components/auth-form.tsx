@@ -43,11 +43,13 @@ export function AuthForm({ mode, confirmationNotice = null }: { mode: AuthMode; 
   const [password, setPassword] = useState("");
   const [businessName, setBusinessName] = useState("Marindo Farm");
   const [showPassword, setShowPassword] = useState(false);
-  const [message, setMessage] = useState(confirmationNotice === "confirmed"
-    ? "Email sudah dikonfirmasi. Silakan masuk dengan email dan kata sandi Anda."
-    : confirmationNotice === "link"
-      ? "Tautan tidak berlaku atau sudah pernah dibuka. Coba masuk dahulu; jika belum bisa, kirim tautan baru."
-      : "");
+  const [message, setMessage] = useState(
+    confirmationNotice === "confirmed"
+      ? "Email sudah dikonfirmasi. Silakan masuk dengan email dan kata sandi Anda."
+      : confirmationNotice === "link"
+        ? "Tautan tidak berlaku atau sudah pernah dibuka. Coba masuk dahulu; jika belum bisa, kirim tautan baru."
+        : "",
+  );
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [confirmationPending, setConfirmationPending] = useState(false);
@@ -55,7 +57,10 @@ export function AuthForm({ mode, confirmationNotice = null }: { mode: AuthMode; 
 
   useEffect(() => {
     if (!confirmationPending || resendCountdown <= 0) return;
-    const timer = window.setTimeout(() => setResendCountdown((seconds) => Math.max(0, seconds - 1)), 1000);
+    const timer = window.setTimeout(
+      () => setResendCountdown((seconds) => Math.max(0, seconds - 1)),
+      1000,
+    );
     return () => window.clearTimeout(timer);
   }, [confirmationPending, resendCountdown]);
 
@@ -131,7 +136,9 @@ export function AuthForm({ mode, confirmationNotice = null }: { mode: AuthMode; 
         }
         setConfirmationPending(true);
         setResendCountdown(60);
-        setMessage(`Tautan konfirmasi sudah dikirim ke ${parsed.data.email}. Buka email tersebut untuk mengaktifkan akun. Setelah konfirmasi berhasil, Anda akan diarahkan ke aplikasi.`);
+        setMessage(
+          `Tautan konfirmasi sudah dikirim ke ${parsed.data.email}. Buka email tersebut untuk mengaktifkan akun. Setelah konfirmasi berhasil, Anda akan diarahkan ke aplikasi.`,
+        );
       } else if (mode === "forgot") {
         const parsed = loginSchema.shape.email.safeParse(email);
         if (!parsed.success) throw new Error("Masukkan email yang valid.");
@@ -162,16 +169,34 @@ export function AuthForm({ mode, confirmationNotice = null }: { mode: AuthMode; 
   return (
     <main className="auth-layout">
       <section className="auth-story" aria-label="Keuangan Marindo Farm">
-        <Link href="/login" className="brand brand-light" onClick={(event) => { if (confirmationPending) event.preventDefault(); }} aria-disabled={confirmationPending}>
-          <span className="brand-mark brand-logo-mark"><Image src="/marindo-farm-mark.png" alt="" width={40} height={40} /></span>
-          <span><strong>KEUANGAN</strong><small>MARINDO FARM</small></span>
+        <Link
+          href="/login"
+          className="brand brand-light"
+          onClick={(event) => {
+            if (confirmationPending) event.preventDefault();
+          }}
+          aria-disabled={confirmationPending}
+        >
+          <span className="brand-mark brand-logo-mark">
+            <Image src="/marindo-farm-mark.png" alt="" width={40} height={40} />
+          </span>
+          <span>
+            <strong>KEUANGAN</strong>
+            <small>MARINDO FARM</small>
+          </span>
         </Link>
         <div className="story-copy">
           <p className="eyebrow">{text.eyebrow}</p>
-          <h1>{text.title.split("\n").map((line) => <span key={line}>{line}</span>)}</h1>
+          <h1>
+            {text.title.split("\n").map((line) => (
+              <span key={line}>{line}</span>
+            ))}
+          </h1>
           <p>{text.description}</p>
         </div>
-        <div className="story-foot"><span className="story-dot" />Dibuat untuk usaha yang terus bertumbuh</div>
+        <div className="story-foot">
+          <span className="story-dot" />Dibuat untuk usaha yang terus bertumbuh
+        </div>
         <div className="story-orbit orbit-one" />
         <div className="story-orbit orbit-two" />
         <Leaf className="story-leaf" size={126} strokeWidth={0.7} />
@@ -179,60 +204,219 @@ export function AuthForm({ mode, confirmationNotice = null }: { mode: AuthMode; 
 
       <section className="auth-panel">
         <div className="auth-topline">
-          {confirmationPending ? <span /> : <Link href="/" className="back-link"><ArrowLeft size={16} /> Beranda</Link>}
-          <span className="secure-label"><LockKeyhole size={13} /> Ruang usaha pribadi</span>
+          {confirmationPending ? (
+            <span />
+          ) : (
+            <Link href="/" className="back-link">
+              <ArrowLeft size={16} /> Beranda
+            </Link>
+          )}
+          <span className="secure-label">
+            <LockKeyhole size={13} /> Ruang usaha pribadi
+          </span>
         </div>
         <div className="auth-card">
           <div className="auth-heading">
-            <div className="auth-icon"><Image src="/marindo-farm-mark.png" alt="" width={40} height={40} /></div>
+            <div className="auth-icon">
+              <Image src="/marindo-farm-mark.png" alt="" width={40} height={40} />
+            </div>
             <p className="eyebrow">KEUANGAN MARINDO FARM</p>
-            <h2>{confirmationPending ? "Konfirmasi email" : localDevelopment && mode === "login" ? "Buka ruang usaha" : mode === "login" ? "Masuk ke akun" : mode === "signup" ? "Daftar usaha" : mode === "forgot" ? "Lupa kata sandi?" : "Atur ulang kata sandi"}</h2>
-            <p className="auth-intro">{confirmationPending ? "Selesaikan konfirmasi untuk mengaktifkan akun." : localDevelopment && mode === "login" ? "Database SQLite lokal untuk penggunaan di komputer ini." : mode === "signup" ? "Buat ruang pencatatan khusus untuk usaha Anda." : mode === "login" ? "Lanjutkan mengelola catatan usaha Anda." : text.description}</p>
+            <h2>
+              {confirmationPending
+                ? "Konfirmasi email"
+                : localDevelopment && mode === "login"
+                  ? "Buka ruang usaha"
+                  : mode === "login"
+                    ? "Masuk ke akun"
+                    : mode === "signup"
+                      ? "Daftar usaha"
+                      : mode === "forgot"
+                        ? "Lupa kata sandi?"
+                        : "Atur ulang kata sandi"}
+            </h2>
+            <p className="auth-intro">
+              {confirmationPending
+                ? "Selesaikan konfirmasi untuk mengaktifkan akun."
+                : localDevelopment && mode === "login"
+                  ? "Database SQLite lokal untuk penggunaan di komputer ini."
+                  : mode === "signup"
+                    ? "Buat ruang pencatatan khusus untuk usaha Anda."
+                    : mode === "login"
+                      ? "Lanjutkan mengelola catatan usaha Anda."
+                      : text.description}
+            </p>
           </div>
 
           {confirmationPending && mode === "signup" ? (
             <div className="confirmation-pending" role="status" aria-live="polite">
-              <div className="confirmation-email-icon"><Mail size={22} /></div>
+              <div className="confirmation-email-icon">
+                <Mail size={22} />
+              </div>
               <h3>Buka tautan konfirmasi</h3>
               <p>{message}</p>
-              <button className="primary-button auth-submit" type="button" onClick={() => void resendConfirmation()} disabled={busy || resendCountdown > 0}>
-                {busy ? "Mengirim tautan..." : resendCountdown > 0 ? `Kirim ulang dalam ${String(Math.floor(resendCountdown / 60)).padStart(2, "0")}:${String(resendCountdown % 60).padStart(2, "0")}` : "Kirim ulang konfirmasi"}
+              <button
+                className="primary-button auth-submit"
+                type="button"
+                onClick={() => void resendConfirmation()}
+                disabled={busy || resendCountdown > 0}
+              >
+                {busy
+                  ? "Mengirim tautan..."
+                  : resendCountdown > 0
+                    ? `Kirim ulang dalam ${String(Math.floor(resendCountdown / 60)).padStart(2, "0")}:${String(resendCountdown % 60).padStart(2, "0")}`
+                    : "Kirim ulang konfirmasi"}
               </button>
-              {error && <p className="form-alert error-alert" role="alert">{error}</p>}
-              <p className="confirmation-help">Buka tautan dari email untuk menyelesaikan pendaftaran. Periksa juga folder spam.</p>
+              {error && (
+                <p className="form-alert error-alert" role="alert">
+                  {error}
+                </p>
+              )}
+              <p className="confirmation-help">
+                Buka tautan dari email untuk menyelesaikan pendaftaran. Periksa juga folder spam.
+              </p>
             </div>
-          ) : <form className="auth-form" onSubmit={submit}>
-            {mode === "signup" && (
-              <label className="field-label">Nama usaha
-                <span className="input-wrap"><Sprout size={17} /><input autoComplete="organization" value={businessName} onChange={(event) => setBusinessName(event.target.value)} placeholder="Marindo Farm" /></span>
-              </label>
-            )}
-            {mode !== "reset" && (!localMode || !localDevelopment) && (
-              <label className="field-label">Email
-                <span className="input-wrap"><Mail size={17} /><input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nama@email.com" /></span>
-              </label>
-            )}
-            {needsPassword && (
-              <label className="field-label">Kata sandi
-                <span className="input-wrap"><LockKeyhole size={17} /><input type={showPassword ? "text" : "password"} autoComplete={mode === "signup" ? "new-password" : "current-password"} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Minimal 8 karakter" /><button type="button" className="icon-button" aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"} onClick={() => setShowPassword((shown) => !shown)}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></span>
-              </label>
-            )}
-            {mode === "login" && (!localMode || !localDevelopment) && <Link className="forgot-link" href="/lupa-password">Lupa kata sandi?</Link>}
-            {mode === "login" && confirmationNotice === "link" && <button className="forgot-link" type="button" onClick={() => void resendConfirmation()} disabled={busy}>Kirim ulang tautan konfirmasi</button>}
-            {error && <p className="form-alert error-alert" role="alert">{error}</p>}
-            {message && <p className="form-alert success-alert" role="status">{message}</p>}
-            <button className="primary-button auth-submit" type="submit" disabled={busy || (localMode && !localDevelopment)}>
-              {busy ? "Memproses..." : localDevelopment && mode === "login" ? "Buka ruang usaha" : text.button}<ArrowRight size={17} />
-            </button>
-            {localDevelopment && mode === "login" && <p className="demo-note">Database SQLite tersimpan di komputer ini. Untuk login dan akses dari mana saja, hubungkan Supabase.</p>}
-            {localMode && !localDevelopment && <p className="form-alert error-alert" role="status">Aplikasi publik memerlukan Supabase. Set URL dan publishable key Supabase, lalu terapkan migration.</p>}
-          </form>}
+          ) : (
+            <form className="auth-form" onSubmit={submit}>
+              {mode === "signup" && (
+                <label className="field-label">
+                  Nama usaha
+                  <span className="input-wrap">
+                    <Sprout size={17} />
+                    <input
+                      autoComplete="organization"
+                      value={businessName}
+                      onChange={(event) => setBusinessName(event.target.value)}
+                      placeholder="Marindo Farm"
+                    />
+                  </span>
+                </label>
+              )}
+              {mode !== "reset" && (!localMode || !localDevelopment) && (
+                <label className="field-label">
+                  Email
+                  <span className="input-wrap">
+                    <Mail size={17} />
+                    <input
+                      type="email"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      placeholder="nama@email.com"
+                    />
+                  </span>
+                </label>
+              )}
+              {needsPassword && (
+                <label className="field-label">
+                  Kata sandi
+                  <span className="input-wrap">
+                    <LockKeyhole size={17} />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      placeholder="Minimal 8 karakter"
+                    />
+                    <button
+                      type="button"
+                      className="icon-button"
+                      aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+                      onClick={() => setShowPassword((shown) => !shown)}
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </span>
+                </label>
+              )}
+              {mode === "login" && (!localMode || !localDevelopment) && (
+                <Link className="forgot-link" href="/lupa-password">
+                  Lupa kata sandi?
+                </Link>
+              )}
+              {mode === "login" && confirmationNotice === "link" && (
+                <button
+                  className="forgot-link"
+                  type="button"
+                  onClick={() => void resendConfirmation()}
+                  disabled={busy}
+                >
+                  Kirim ulang tautan konfirmasi
+                </button>
+              )}
+              {error && (
+                <p className="form-alert error-alert" role="alert">
+                  {error}
+                </p>
+              )}
+              {message && (
+                <p className="form-alert success-alert" role="status">
+                  {message}
+                </p>
+              )}
+              <button
+                className="primary-button auth-submit"
+                type="submit"
+                disabled={busy || (localMode && !localDevelopment)}
+              >
+                {busy
+                  ? "Memproses..."
+                  : localDevelopment && mode === "login"
+                    ? "Buka ruang usaha"
+                    : text.button}
+                <ArrowRight size={17} />
+              </button>
 
-          {!confirmationPending && <div className="auth-switch">
-            {localDevelopment ? mode !== "login" && <Link href="/login">Kembali ke halaman database lokal</Link> : mode === "login" ? <>Belum punya akun? <Link href="/daftar">Daftar sekarang</Link></> : mode === "signup" ? <>Sudah memiliki akun? <Link href="/login">Masuk</Link></> : <Link href="/login">Kembali ke halaman masuk</Link>}
-          </div>}
+              {/* Offline SQLite Shortcut in Dev Mode */}
+              {process.env.NODE_ENV !== "production" && mode === "login" && !localMode && (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  style={{ width: "100%", marginTop: "0.5rem" }}
+                  onClick={() => {
+                    localStorage.setItem("marindo_active_mode", "local");
+                    window.location.assign("/dashboard");
+                  }}
+                >
+                  Buka Database Offline (SQLite Lokal)
+                </button>
+              )}
+
+              {localDevelopment && mode === "login" && (
+                <p className="demo-note">
+                  Database SQLite tersimpan di komputer ini. Untuk login dan akses dari mana saja, hubungkan Supabase.
+                </p>
+              )}
+              {localMode && !localDevelopment && (
+                <p className="form-alert error-alert" role="status">
+                  Aplikasi publik memerlukan Supabase. Set URL dan publishable key Supabase, lalu terapkan migration.
+                </p>
+              )}
+            </form>
+          )}
+
+          {!confirmationPending && (
+            <div className="auth-switch">
+              {localDevelopment ? (
+                mode !== "login" && <Link href="/login">Kembali ke halaman database lokal</Link>
+              ) : mode === "login" ? (
+                <>
+                  Belum punya akun? <Link href="/daftar">Daftar sekarang</Link>
+                </>
+              ) : mode === "signup" ? (
+                <>
+                  Sudah memiliki akun? <Link href="/login">Masuk</Link>
+                </>
+              ) : (
+                <Link href="/login">Kembali ke halaman masuk</Link>
+              )}
+            </div>
+          )}
         </div>
-        <footer className="auth-footer"><span>© 2026 Keuangan Marindo Farm</span><span>Data usaha Anda, kendali Anda.</span></footer>
+        <footer className="auth-footer">
+          <span>© 2026 Keuangan Marindo Farm</span>
+          <span>Data usaha Anda, kendali Anda.</span>
+        </footer>
       </section>
     </main>
   );
