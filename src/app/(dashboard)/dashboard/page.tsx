@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -234,9 +234,13 @@ export default function DashboardPage() {
             </button>
           </div>
 
+          <Link className="secondary-button compact-button" href="/kalkulator">
+            <Calculator size={15} />
+            Kalkulator Pakan
+          </Link>
           <Link className="primary-button compact-button" href="/transaksi">
-            <CirclePlus size={17} />
-            Catat transaksi
+            <CirclePlus size={16} />
+            Catat Transaksi
           </Link>
         </div>
       </div>

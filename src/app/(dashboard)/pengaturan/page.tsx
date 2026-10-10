@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, type ChangeEvent, type FormEvent } from "react";
 import Image from "next/image";
@@ -321,7 +321,7 @@ function SettingsForm({ profile }: { profile: Profile }) {
 
           <div className="field-label logo-field">
             Logo usaha
-            <span className="optional-label">Opsional • JPG, PNG, WebP • maks. 5 MB</span>
+            <span className="optional-label">Opsional â€¢ JPG, PNG, WebP â€¢ maks. 5 MB</span>
             <div className="logo-upload-row">
               {(logoPath.startsWith("data:image/") ? logoPath : logoUrl) ? (
                 <Image
@@ -391,41 +391,28 @@ function SettingsForm({ profile }: { profile: Profile }) {
         </form>
       </section>
 
-      {/* 2. Storage Mode Section */}
+      {/* 2. Cloud Database Status Section */}
       <section className="panel settings-section">
         <div className="settings-section-heading">
           <div className="settings-section-icon icon-storage">
-            {mode === "local" ? <Database size={18} /> : <Cloud size={18} />}
+            <Cloud size={18} />
           </div>
           <div>
-            <h3>Mode Penyimpanan Data</h3>
-            <p>Pilih antara database SQLite offline di komputer ini atau sinkronisasi online Supabase Cloud.</p>
+            <h3>Database & Sinkronisasi Cloud (Supabase)</h3>
+            <p>Data tersimpan di Supabase Cloud secara aman dan dapat diakses dari mana saja.</p>
           </div>
         </div>
 
         <div className="storage-mode-box">
           <div className="mode-status-line">
-            <span>Status Aktif:</span>
-            <strong className={`status-pill ${mode === "local" ? "status-partial" : "status-paid"}`}>
-              {mode === "local" ? "Database SQLite Lokal (Offline)" : "Supabase Cloud Sync (Online)"}
+            <span>Status Cloud:</span>
+            <strong className="status-pill status-paid">
+              Supabase Cloud (Online & Tersinkronisasi)
             </strong>
           </div>
           <p className="editor-description">
-            {mode === "local"
-              ? "Data tersimpan di file lokal (.data/marindo.sqlite) pada laptop ini. Dapat digunakan 100% tanpa internet."
-              : "Data disinkronkan secara real-time ke cloud Supabase dan terlindungi autentikasi multi-perangkat."}
+            Semua catatan keuangan, transaksi, kandang, hutang-piutang, dan profil usaha Marindo Farm otomatis tersimpan aman di cloud Supabase secara real-time dan terlindungi autentikasi.
           </p>
-
-          <div className="storage-switch-actions">
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => switchMode(mode === "local" ? "supabase" : "local")}
-            >
-              {mode === "local" ? <Cloud size={15} /> : <Database size={15} />}
-              {mode === "local" ? "Beralih ke Supabase Cloud" : "Beralih ke SQLite Lokal (Offline)"}
-            </button>
-          </div>
         </div>
       </section>
 

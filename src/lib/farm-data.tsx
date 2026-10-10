@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   createContext,
@@ -102,19 +102,18 @@ export function FarmDataProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FarmUser | null>(null);
   const [mode, setMode] = useState<"local" | "supabase">(() => {
     if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("marindo_active_mode");
-      if (stored === "local" || stored === "supabase") return stored;
+      localStorage.setItem("marindo_active_mode", "supabase");
     }
-    return isSupabaseConfigured ? "supabase" : "local";
+    return "supabase";
   });
   const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
 
-  const switchMode = (targetMode: "local" | "supabase") => {
+  const switchMode = (_targetMode: "local" | "supabase") => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("marindo_active_mode", targetMode);
+      localStorage.setItem("marindo_active_mode", "supabase");
     }
-    setMode(targetMode);
+    setMode("supabase");
     setReady(false);
     setError("");
   };

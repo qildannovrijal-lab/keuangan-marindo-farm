@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -237,13 +237,11 @@ export function AuthForm({ mode, confirmationNotice = null }: { mode: AuthMode; 
             <p className="auth-intro">
               {confirmationPending
                 ? "Selesaikan konfirmasi untuk mengaktifkan akun."
-                : localDevelopment && mode === "login"
-                  ? "Database SQLite lokal untuk penggunaan di komputer ini."
-                  : mode === "signup"
-                    ? "Buat ruang pencatatan khusus untuk usaha Anda."
-                    : mode === "login"
-                      ? "Lanjutkan mengelola catatan usaha Anda."
-                      : text.description}
+                : mode === "signup"
+                  ? "Buat ruang pencatatan khusus untuk usaha Anda."
+                  : mode === "login"
+                    ? "Lanjutkan mengelola catatan usaha Anda."
+                    : text.description}
             </p>
           </div>
 
@@ -367,29 +365,9 @@ export function AuthForm({ mode, confirmationNotice = null }: { mode: AuthMode; 
                 <ArrowRight size={17} />
               </button>
 
-              {/* Offline SQLite Shortcut in Dev Mode */}
-              {process.env.NODE_ENV !== "production" && mode === "login" && !localMode && (
-                <button
-                  type="button"
-                  className="secondary-button"
-                  style={{ width: "100%", marginTop: "0.5rem" }}
-                  onClick={() => {
-                    localStorage.setItem("marindo_active_mode", "local");
-                    window.location.assign("/dashboard");
-                  }}
-                >
-                  Buka Database Offline (SQLite Lokal)
-                </button>
-              )}
-
-              {localDevelopment && mode === "login" && (
-                <p className="demo-note">
-                  Database SQLite tersimpan di komputer ini. Untuk login dan akses dari mana saja, hubungkan Supabase.
-                </p>
-              )}
               {localMode && !localDevelopment && (
                 <p className="form-alert error-alert" role="status">
-                  Aplikasi publik memerlukan Supabase. Set URL dan publishable key Supabase, lalu terapkan migration.
+                  Aplikasi memerlukan Supabase. Pastikan URL dan publishable key Supabase telah terkonfigurasi.
                 </p>
               )}
             </form>

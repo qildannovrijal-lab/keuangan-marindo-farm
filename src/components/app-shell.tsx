@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -177,25 +177,20 @@ export function AppShell({ children }: { children: ReactNode }) {
           </summary>
           <div className="farm-switcher-popover">
             <div className="farm-switcher-account">
-              Masuk sebagai<strong>{user.email}</strong>
+              <span className="farm-switcher-role-label">Masuk sebagai</span>
+              <strong>{user.email}</strong>
             </div>
-            <div className="farm-switcher-mode">
-              <span>Mode Penyimpanan:</span>
-              <strong>{mode === "local" ? "SQLite Lokal" : "Supabase Cloud"}</strong>
+            <div className="farm-switcher-cloud-badge">
+              <span className="cloud-dot"></span>
+              <Cloud size={13} />
+              <span>Supabase Cloud Aktif</span>
             </div>
-            <button
-              className="farm-switcher-mode-toggle"
-              onClick={() => switchMode(mode === "local" ? "supabase" : "local")}
-            >
-              {mode === "local" ? <Cloud size={14} /> : <Database size={14} />}
-              {mode === "local" ? "Beralih ke Supabase Cloud" : "Beralih ke SQLite Lokal"}
-            </button>
             <button
               className="farm-switcher-logout"
               onClick={() => void signOut()}
               disabled={loggingOut}
             >
-              <LogOut size={16} />
+              <LogOut size={15} />
               {loggingOut ? "Keluar..." : "Keluar dari akun"}
             </button>
           </div>
@@ -265,19 +260,15 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Menu size={21} />
           </button>
           <div className="topbar-title">
-            <span className="topbar-overline">Keuangan Marindo Farm • {businessName}</span>
+            <span className="topbar-overline">Keuangan Marindo Farm â€¢ {businessName}</span>
             <h1>{currentTitle}</h1>
           </div>
           <div className="topbar-actions">
-            <button
-              type="button"
-              className={`mode-indicator-pill ${mode === "local" ? "mode-local" : "mode-cloud"}`}
-              onClick={() => switchMode(mode === "local" ? "supabase" : "local")}
-              title="Klik untuk mengganti mode penyimpanan"
-            >
-              {mode === "local" ? <Database size={13} /> : <Cloud size={13} />}
-              <span>{mode === "local" ? "SQLite Lokal" : "Cloud Sync"}</span>
-            </button>
+            <div className="cloud-status-indicator" title="Tersambung ke Supabase Cloud">
+              <span className="cloud-status-dot" />
+              <Cloud size={13} />
+              <span>Supabase Cloud</span>
+            </div>
 
             {/* Notification Bell with Dropdown */}
             <div className="notification-wrapper" ref={notifRef}>
@@ -330,7 +321,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                                 {debt.kind === "payable" ? "Hutang" : "Piutang"}: {debt.party_name}
                               </strong>
                               <span>
-                                Sisa {formatCurrency(Number(debt.amount) - Number(debt.paid_amount))} • Jatuh tempo{" "}
+                                Sisa {formatCurrency(Number(debt.amount) - Number(debt.paid_amount))} â€¢ Jatuh tempo{" "}
                                 {debt.due_date ? formatDate(debt.due_date) : "-"}
                               </span>
                             </div>
@@ -374,7 +365,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
         <main className="page-content">{children}</main>
         <footer className="app-footer">
-          <span>© 2026 Keuangan Marindo Farm</span>
+          <span>Â© 2026 Keuangan Marindo Farm</span>
           <span>Catat hari ini, rencanakan esok.</span>
         </footer>
       </div>
